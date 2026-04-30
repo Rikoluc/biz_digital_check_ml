@@ -273,11 +273,9 @@ def analysis():
 
     return render_template("analysis.html", all_data=all_data, pca_json=pca_json,
                            cluster_stats=cluster_stats, has_ml=has_ml,
-                           avg_domains=json.dumps(avg_domains), domains=DOMAINS, count=len(all_data))
-
-
-# ─── Boot ─────────────────────────────────────────────────────────────────────
+                           avg_domains=json.dumps(avg_domains), domains=DOMAINS, count=len(all_data
 
 if __name__ == "__main__":
-    init_db()
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
