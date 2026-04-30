@@ -23,7 +23,7 @@ QUESTIONS = [
     {"id":"q1_1","domain_id":1,"text":"Votre entreprise possède-t-elle un site web professionnel ?",
      "options":["Non","En cours de création","Oui, site basique","Oui, site optimisé & mobile"]},
     {"id":"q1_2","domain_id":1,"text":"Êtes-vous actif sur les réseaux sociaux ?",
-     "options":["Non","1 réseau, inactif","1–2 réseaux actifs","3+ réseaux, publications régulières"]},
+     "options":["Non","1 réseau, inactif","1–2 réseaux actifs" ,"3+ réseaux, publications régulières"]},
     {"id":"q1_3","domain_id":1,"text":"Proposez-vous de la vente en ligne (e-commerce) ?",
      "options":["Non","Réflexion en cours","Marketplace/vente partielle","Boutique complète & optimisée"]},
     {"id":"q1_4","domain_id":1,"text":"Votre présence en ligne est-elle référencée (SEO/GMB) ?",
@@ -273,7 +273,7 @@ def analysis():
 
     return render_template("analysis.html", all_data=all_data, pca_json=pca_json,
                            cluster_stats=cluster_stats, has_ml=has_ml,
-                           avg_domains=json.dumps(avg_domains), domains=DOMAINS, count=len(all_data
+                           avg_domains=json.dumps(avg_domains), domains=DOMAINS, count=len(all_data))
 
 if __name__ == "__main__":
     init_db()                                                                                       
