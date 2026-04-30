@@ -276,6 +276,6 @@ def analysis():
                            avg_domains=json.dumps(avg_domains), domains=DOMAINS, count=len(all_data))
 
 init_db()                                                                                       
-port = int(os.environ.get("PORT", 5000))
+
 
 
