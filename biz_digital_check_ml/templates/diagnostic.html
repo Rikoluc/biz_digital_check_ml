@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Diagnostic — BizDigitalCheck ML{% endblock %}
+
+{% block head %}
+<style>
+  .step-nav { display:flex; gap:6px; margin-bottom:2rem; flex-wrap:wrap; }
+  .step-btn {
+    flex:1; min-width:80px; text-align:center;
+    padding:6px 4px; border-radius:8px;
+    font-size:11.5px; font-weight:600;
+    border: 1px solid var(--border);
+    background: var(--card); color:var(--muted);
+    cursor:pointer; transition:all .2s;
+  }
+  .step-btn.active   { border-color:var(--indigo); color:#a5b4fc; background:rgba(99,102,241,.12); }
+  .step-btn.done     { border-color:rgba(16,185,129,.3); color:#34d399; background:rgba(16,185,129,.08); }
+  .step-btn.locked   { opacity:.4; cursor:not-allowed; }
+
+  .step-page { display:none; }
+  .step-page.active { display:block; }
+
+  .question-card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:1.25rem 1.5rem;
+    margin-bottom:1rem;
+    transition:border-color .2s;
+  }
+  .question-card:focus-within { border-color:var(--border-hi); }
+  .question-num {
+    font-family:var(--font-mono);
+    font-size:11px; color:var(--muted); margin-bottom:4px;
+  }
+  .question-text { font-weight:500; font-size:.93rem; margin-bottom:.8rem; }
+
+  .option-label {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; border-radius:8px;
+    cursor:pointer; transition:background .15s;
+    font-size:13.5px;
+  }
+  .option-label:hover { background:rgba(255,255,255,.05); }
+  .option-label input[type=radio] { accent-color:var(--indigo); width:15px; height:15px; }
+  .option-label.selected { background:rgba(99,102,241,.1); }
+
+  .progress-outer {
+    height:4px; background:rgba(255,255,255,.07); border-radius:2px;
+    margin-bottom:2rem; overflow:hidden;
+  }
+  .progress-inner {
+    height:100%;
+    background:linear-gradient(90deg,var(--indigo),var(--cyan));
+    border-radius:2px;
+    transition:width .4s ease;
+  }
+
+  .nav-buttons { display:flex; gap:1rem; margin-top:1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    <!-- Header -->
+    <div class="mb-4 fade-up">
+      <a href="/" style="color:var(--muted);text-decoration:none;font-size:13px">
+        <i class="bi bi-arrow-left me-1"></i>Accueil
+      </a>
+      <h2 style="margin-top:.75rem;letter-spacing:-0.5px">Diagnostic de maturité digitale</h2>
+      <p style="color:var(--muted);font-size:14.5px">
+        Répondez honnêtement. 24 questions · 6 domaines · ~5 minutes
+      </p>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-outer fade-up delay-1">
+      <div class="progress-inner" id="globalProgress" style="width:0%"></div>
+    </div>
+
+    <!-- Step nav -->
+    <div class="step-nav fade-up delay-1" id="stepNav">
+      {% set domain_icons = ["🌐","⚙️","📣","🔐","📊","🤖"] %}
+      {% for domain in domains %}
+      <button type="button" class="step-btn {% if loop.first %}active{% else %}locked{% endif %}"
+              data-step="{{ loop.index0 }}" onclick="goStep({{ loop.index0 }})">
+        {{ domain_icons[loop.index0] }}<br>{{ domain.split(' ')[0] }}
+      </button>
+      {% endfor %}
+      <button type="button" class="step-btn locked" data-step="6" onclick="goStep(6)">
+        ✅<br>Infos
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" id="diagForm">
+
+      <!-- Domain steps -->
+      {% for domain, qs in questions_by_domain.items() %}
+      <div class="step-page {% if loop.first %}active{% endif %} fade-up" id="step-{{ loop.index0 }}">
+        <div class="mb-3 d-flex align-items-center gap-3">
+          <div class="domain-pill">
+            {{ domain_icons[loop.index0] }} {{ domain }}
+          </div>
+          <span style="font-size:12px;color:var(--muted)">{{ loop.index }}/6</span>
+        </div>
+
+        {% for q in qs %}
+        <div class="question-card" id="card-{{ q.id }}">
+          <div class="question-num">Q{{ loop.index }}</div>
+          <div class="question-text">{{ q.text }}</div>
+          <div class="d-flex flex-column gap-1">
+            {% for opt in q.options %}
+            <label class="option-label">
+              <input type="radio" name="{{ q.id }}" value="{{ loop.index0 }}"
+                     onchange="onAnswer('{{ q.id }}', this)" required>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--indigo);min-width:14px">{{ loop.index0 }}</span>
+              {{ opt }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="nav-buttons">
+          {% if not loop.first %}
+          <button type="button" class="btn-outline-custom" onclick="prevStep()">
+            <i class="bi bi-arrow-left me-1"></i>Précédent
+          </button>
+          {% endif %}
+          <button type="button" class="btn-primary-custom ms-auto" onclick="nextStep({{ loop.index0 }}, {{ qs|length }})">
+            {% if loop.last %}Continuer<i class="bi bi-arrow-right ms-2"></i>
+            {% else %}Suivant<i class="bi bi-arrow-right ms-2"></i>{% endif %}
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Info step -->
+      <div class="step-page" id="step-6">
+        <div class="card-glass no-hover">
+          <h5 class="mb-4" style="font-weight:700"><i class="bi bi-building me-2" style="color:var(--indigo)"></i>Informations sur votre entreprise</h5>
+
+          <div class="mb-3">
+            <label style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">
+              Nom de l'entreprise
+            </label>
+            <input type="text" name="company_name" placeholder="Ex : Boulangerie Martin"
+              style="width:100%;background:var(--card-alt);border:1px solid var(--border);border-radius:9px;
+                     padding:10px 14px;color:var(--text);font-size:14px;outline:none;
+                     transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--indigo)'"
+              onblur="this.style.borderColor='var(--border)'"
+              required/>
+          </div>
+
+          <div class="mb-3">
+            <label style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">Secteur d'activité</label>
+            <select name="sector"
+              style="width:100%;background:var(--card-alt);border:1px solid var(--border);border-radius:9px;
+                     padding:10px 14px;color:var(--text);font-size:14px;outline:none" required>
+              <option value="">-- Choisissez votre secteur --</option>
+              {% for s in sectors %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">Taille de l'entreprise</label>
+            <div class="d-flex gap-2 flex-wrap">
+              {% for size in sizes %}
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--card-alt);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:13.5px;transition:all .15s"
+                     id="size-label-{{ loop.index }}">
+                <input type="radio" name="size" value="{{ size }}" required
+                       onchange="selectSize({{ loop.index }}, {{ sizes|length }})">
+                {{ size }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:13.5px;color:#34d399">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Toutes vos réponses sont enregistrées !</strong> Cliquez sur "Générer le rapport" pour obtenir votre diagnostic complet.
+          </div>
+
+          <div class="nav-buttons">
+            <button type="button" class="btn-outline-custom" onclick="prevStep()">
+              <i class="bi bi-arrow-left me-1"></i>Précédent
+            </button>
+            <button type="submit" class="btn-primary-custom ms-auto" id="submitBtn" style="font-size:1rem;padding:12px 28px">
+              <i class="bi bi-bar-chart-fill me-2"></i>Générer mon rapport
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TOTAL_STEPS = 7; // 6 domains + 1 info
+let currentStep = 0;
+const answered = {}; // track answered questions per domain
+const domainQCounts = [4, 4, 4, 4, 4, 4]; // 4 questions per domain
+
+function updateProgress() {
+  const totalQ = 24;
+  const answeredQ = Object.keys(answered).filter(k => answered[k]).length;
+  const pct = Math.round((answeredQ / totalQ) * 100);
+  document.getElementById('globalProgress').style.width = pct + '%';
+}
+
+function onAnswer(qid, input) {
+  answered[qid] = true;
+  // Highlight selected option
+  const card = document.getElementById('card-' + qid);
+  card.querySelectorAll('.option-label').forEach(l => l.classList.remove('selected'));
+  input.closest('.option-label').classList.add('selected');
+  updateProgress();
+}
+
+function goStep(n) {
+  const btn = document.querySelector(`.step-btn[data-step="${n}"]`);
+  if (btn && btn.classList.contains('locked')) return;
+
+  document.querySelectorAll('.step-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+
+  document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextStep(domainIdx, qCount) {
+  // Validate all questions in this domain answered
+  const page = document.getElementById('step-' + domainIdx);
+  const radios = page.querySelectorAll('input[type=radio]');
+  const names = [...new Set([...radios].map(r => r.name))];
+  for (const name of names) {
+    if (!page.querySelector(`input[name="${name}"]:checked`)) {
+      // Highlight unanswered
+      const card = document.getElementById('card-' + name);
+      card.style.borderColor = 'var(--rose)';
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => card.style.borderColor = '', 2500);
+      return;
+    }
+  }
+
+  // Mark this step done
+  const btn = document.querySelector(`.step-btn[data-step="${domainIdx}"]`);
+  if (btn) { btn.classList.remove('active'); btn.classList.add('done'); }
+
+  const nextN = domainIdx + 1;
+  const nextBtn = document.querySelector(`.step-btn[data-step="${nextN}"]`);
+  if (nextBtn) nextBtn.classList.remove('locked');
+
+  goStep(nextN);
+}
+
+function prevStep() {
+  if (currentStep > 0) goStep(currentStep - 1);
+}
+
+function selectSize(idx, total) {
+  for (let i = 1; i <= total; i++) {
+    const lbl = document.getElementById('size-label-' + i);
+    if (lbl) lbl.style.borderColor = i === idx ? 'var(--indigo)' : 'var(--border)';
+  }
+}
+
+document.getElementById('diagForm').addEventListener('submit', function() {
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Analyse en cours…';
+  btn.disabled = true;
+});
+</script>
+{% endblock %}

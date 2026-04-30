@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — BizDigitalCheck ML{% endblock %}
+
+{% block head %}
+<style>
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+
+  .kpi {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:1.1rem 1.25rem;
+  }
+  .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:600; }
+  .kpi-val   { font-family:var(--font-head); font-size:2rem; font-weight:800; line-height:1.1; margin-top:2px; }
+
+  .table-row-hover:hover td { background:var(--card-alt) !important; }
+
+  .empty-state {
+    text-align:center; padding:4rem 2rem;
+    color:var(--muted);
+  }
+  .empty-icon { font-size:3rem; margin-bottom:1rem; display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 fade-up">
+  <div>
+    <h2 style="margin:0;letter-spacing:-.5px">Dashboard</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">{{ count }} diagnostic{{ 's' if count != 1 }} enregistré{{ 's' if count != 1 }}</p>
+  </div>
+  <a href="/diagnostic" class="btn-primary-custom" style="text-decoration:none">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau diagnostic
+  </a>
+</div>
+
+{% if count > 0 %}
+<!-- ── KPIs ──────────────────────────────────────────────── -->
+<div class="kpi-grid mb-4 fade-up delay-1">
+  <div class="kpi">
+    <div class="kpi-label">Total diagnostics</div>
+    <div class="kpi-val" style="color:var(--indigo)">{{ count }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Score moyen</div>
+    <div class="kpi-val" style="color:var(--cyan)">{{ avg_score }}<span style="font-size:.9rem;font-weight:400">/100</span></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Meilleur score</div>
+    <div class="kpi-val" style="color:var(--emerald)">{{ max_score }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Score minimum</div>
+    <div class="kpi-val" style="color:var(--rose)">{{ min_score }}</div>
+  </div>
+</div>
+
+<!-- ── Charts row ────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <!-- Distribution -->
+  <div class="col-lg-4">
+    <div class="card-glass no-hover fade-up delay-1" style="height:280px">
+      <div class="section-title" style="font-size:.85rem"><i class="bi bi-pie-chart" style="color:var(--indigo)"></i>Distribution des profils</div>
+      <div style="height:210px;display:flex;align-items:center;justify-content:center">
+        <canvas id="distChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- Domain averages -->
+  <div class="col-lg-8">
+    <div class="card-glass no-hover fade-up delay-2" style="height:280px">
+      <div class="section-title" style="font-size:.85rem"><i class="bi bi-bar-chart-horizontal" style="color:var(--cyan)"></i>Scores moyens par dimension</div>
+      <div style="height:220px">
+        <canvas id="domainChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Trend ─────────────────────────────────────────────── -->
+{% if count > 1 %}
+<div class="card-glass no-hover mb-4 fade-up delay-2" style="height:200px">
+  <div class="section-title" style="font-size:.85rem"><i class="bi bi-graph-up" style="color:var(--emerald)"></i>Évolution des scores</div>
+  <div style="height:150px">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Diagnostics table ──────────────────────────────────── -->
+<div class="card-glass no-hover fade-up delay-3">
+  <div class="section-title" style="font-size:.85rem"><i class="bi bi-table" style="color:var(--amber)"></i>Tous les diagnostics</div>
+  <div style="overflow-x:auto">
+    <table class="table-custom" style="width:100%">
+      <thead>
+        <tr>
+          <th>Entreprise</th>
+          <th>Secteur</th>
+          <th>Taille</th>
+          <th>Score</th>
+          <th>Profil</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in diagnostics %}
+        <tr class="table-row-hover">
+          <td style="font-weight:600;font-size:14px">{{ d.company_name }}</td>
+          <td><span class="chip">{{ d.sector }}</span></td>
+          <td style="color:var(--muted);font-size:13px">{{ d.size }}</td>
+          <td>
+            <span style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:
+              {% if d.color == 'success' %}var(--emerald)
+              {% elif d.color == 'info' %}var(--cyan)
+              {% elif d.color == 'warning' %}var(--amber)
+              {% else %}var(--rose){% endif %}">
+              {{ d.digital_score }}/100
+            </span>
+          </td>
+          <td><span class="badge-custom badge-{{ d.color }}">{{ d.emoji }} {{ d.label }}</span></td>
+          <td style="color:var(--muted);font-size:13px;font-family:var(--font-mono)">{{ d.created_at }}</td>
+          <td>
+            <a href="/result/{{ d.id }}" style="color:var(--indigo);font-size:12.5px;text-decoration:none;font-weight:500">
+              Voir <i class="bi bi-arrow-right"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<!-- ── Empty ─────────────────────────────────────────────── -->
+<div class="card-glass no-hover fade-up">
+  <div class="empty-state">
+    <span class="empty-icon">📊</span>
+    <h5>Aucun diagnostic pour l'instant</h5>
+    <p style="font-size:14px">Lancez votre premier diagnostic pour voir apparaître les statistiques ici.</p>
+    <a href="/diagnostic" class="btn-primary-custom" style="text-decoration:none;margin-top:.5rem">
+      <i class="bi bi-lightning-charge-fill me-1"></i>Premier diagnostic
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if count > 0 %}
+<script>
+const distribution = {{ distribution | safe }};
+const avgDomains   = {{ avg_domains | safe }};
+const trend        = {{ trend | safe }};
+const domains      = {{ domains | tojson }};
+
+const chartDefaults = {
+  color: '#64748b',
+  borderColor: 'rgba(255,255,255,0.07)',
+};
+
+// ── Distribution doughnut ─────────────────────────────────
+new Chart(document.getElementById('distChart'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(distribution),
+    datasets: [{
+      data: Object.values(distribution),
+      backgroundColor: ['rgba(244,63,94,.7)','rgba(245,158,11,.7)','rgba(34,211,238,.7)','rgba(16,185,129,.7)'],
+      borderColor: 'var(--card)',
+      borderWidth: 3,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    cutout:'72%',
+    plugins: {
+      legend: {
+        position:'right',
+        labels: { color:'#94a3b8', font:{size:11,family:'DM Sans'}, padding:8, boxWidth:10, boxHeight:10 }
+      },
+      tooltip: { backgroundColor:'#131926', borderColor:'rgba(99,102,241,.4)', borderWidth:1, titleColor:'#e2e8f0', bodyColor:'#94a3b8', padding:8 }
+    }
+  }
+});
+
+// ── Domain horizontal bar ─────────────────────────────────
+const domColors = ['#6366f1','#22d3ee','#10b981','#f43f5e','#f59e0b','#8b5cf6'];
+new Chart(document.getElementById('domainChart'), {
+  type: 'bar',
+  data: {
+    labels: domains,
+    datasets: [{
+      data: domains.map(d => avgDomains[d] || 0),
+      backgroundColor: domColors.map(c => c + 'cc'),
+      borderColor: domColors,
+      borderWidth: 1.5,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive:true, maintainAspectRatio:false,
+    scales: {
+      x: { min:0, max:100, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:11}} },
+      y: { grid:{display:false}, ticks:{color:'#94a3b8',font:{size:12,family:'DM Sans'}} }
+    },
+    plugins: {
+      legend:{display:false},
+      tooltip:{ backgroundColor:'#131926', borderColor:'rgba(99,102,241,.4)', borderWidth:1, titleColor:'#e2e8f0', bodyColor:'#94a3b8', padding:8, callbacks:{label:c=>' '+c.raw+'%'} }
+    },
+    animation:{duration:700}
+  }
+});
+
+// ── Trend line ────────────────────────────────────────────
+if (trend.length > 1) {
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: trend.map(t => t.date),
+      datasets: [{
+        data: trend.map(t => t.score),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#6366f1',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:11}} },
+        y: { min:0, max:100, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:11}} }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:'#131926',borderColor:'rgba(99,102,241,.4)',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:8,callbacks:{label:c=>' '+c.raw+'/100'}}
+      },
+      animation:{duration:700}
+    }
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

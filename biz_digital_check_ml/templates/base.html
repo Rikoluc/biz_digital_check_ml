@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}BizDigitalCheck ML{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <!-- Bootstrap 5.3 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+
+  <style>
+    /* ── Design Tokens ──────────────────────────── */
+    :root {
+      --bg:        #080c14;
+      --surface:   #0e1420;
+      --card:      #131926;
+      --card-alt:  #161d2b;
+      --border:    rgba(255,255,255,0.07);
+      --border-hi: rgba(99,102,241,0.4);
+      --indigo:    #6366f1;
+      --cyan:      #22d3ee;
+      --emerald:   #10b981;
+      --amber:     #f59e0b;
+      --rose:      #f43f5e;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --radius:    14px;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --glow-in:   0 0 40px rgba(99,102,241,0.15);
+      --glow-cy:   0 0 40px rgba(34,211,238,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      min-height: 100vh;
+    }
+
+    /* ── Background mesh ────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 0%, rgba(99,102,241,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 90% 100%, rgba(34,211,238,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Typography ─────────────────────────────── */
+    h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; }
+
+    .mono { font-family: var(--font-mono); }
+
+    /* ── Navbar ─────────────────────────────────── */
+    .navbar {
+      background: rgba(8,12,20,0.85) !important;
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1rem;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--text) !important;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--indigo), var(--cyan));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    .nav-link {
+      color: var(--muted) !important;
+      font-size: 13.5px;
+      font-weight: 500;
+      padding: 6px 14px !important;
+      border-radius: 8px;
+      transition: all .2s;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: var(--text) !important;
+      background: rgba(255,255,255,0.06);
+    }
+    .nav-link.active { color: var(--indigo) !important; }
+
+    .nav-cta {
+      background: var(--indigo);
+      color: #fff !important;
+      padding: 7px 18px !important;
+      font-weight: 600;
+      border-radius: 8px;
+    }
+    .nav-cta:hover { background: #4f52e0 !important; color: #fff !important; }
+
+    /* ── Cards ──────────────────────────────────── */
+    .card-glass {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color .25s, box-shadow .25s;
+    }
+    .card-glass:hover { border-color: var(--border-hi); box-shadow: var(--glow-in); }
+
+    .card-glass.no-hover:hover {
+      border-color: var(--border);
+      box-shadow: none;
+    }
+
+    /* ── Stat cards ─────────────────────────────── */
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    /* ── Badges ─────────────────────────────────── */
+    .badge-custom {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-success { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .badge-info    { background: rgba(34,211,238,0.12); color: #22d3ee; border: 1px solid rgba(34,211,238,0.25); }
+    .badge-warning { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .badge-danger  { background: rgba(244,63,94,0.12);  color: #fb7185; border: 1px solid rgba(244,63,94,0.25);  }
+
+    /* ── Score ring ─────────────────────────────── */
+    .score-ring-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Buttons ─────────────────────────────────── */
+    .btn-primary-custom {
+      background: var(--indigo);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 24px;
+      font-weight: 600;
+      font-size: 14.5px;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .btn-primary-custom:hover { background: #4f52e0; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.3); }
+
+    .btn-outline-custom {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 24px;
+      font-weight: 500;
+      font-size: 14.5px;
+      transition: all .2s;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-outline-custom:hover { border-color: var(--indigo); color: var(--indigo); }
+
+    /* ── Domain pill ─────────────────────────────── */
+    .domain-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #a5b4fc;
+    }
+
+    /* ── Progress bar ────────────────────────────── */
+    .score-bar-track {
+      height: 6px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 1s cubic-bezier(.25,.46,.45,.94);
+    }
+
+    /* ── Table ───────────────────────────────────── */
+    .table-custom { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+    .table-custom th {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); padding: 8px 14px; font-weight: 600;
+    }
+    .table-custom td {
+      padding: 12px 14px;
+      background: var(--card);
+      vertical-align: middle;
+      font-size: 14px;
+    }
+    .table-custom tr td:first-child { border-radius: 10px 0 0 10px; }
+    .table-custom tr td:last-child  { border-radius: 0 10px 10px 0; }
+
+    /* ── Section title ───────────────────────────── */
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin-left: 8px;
+    }
+
+    /* ── Page wrapper ────────────────────────────── */
+    .page-content {
+      position: relative;
+      z-index: 1;
+      padding: 2rem 0 4rem;
+    }
+
+    /* ── Chip ────────────────────────────────────── */
+    .chip {
+      display: inline-block;
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Footer ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 0;
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Animations ──────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp .45s ease both; }
+    .delay-1 { animation-delay: .05s; }
+    .delay-2 { animation-delay: .10s; }
+    .delay-3 { animation-delay: .15s; }
+    .delay-4 { animation-delay: .20s; }
+
+    /* ── Scrollbar ───────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <div class="brand-icon">📊</div>
+      BizDigital<span style="color:var(--indigo)">Check</span><span style="font-size:.7rem;color:var(--muted);margin-left:4px;font-weight:400">ML</span>
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <i class="bi bi-list" style="color:var(--text);font-size:1.3rem"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav ms-auto align-items-center gap-1 py-2 py-lg-0">
+        <li class="nav-item"><a class="nav-link {% if request.endpoint=='index' %}active{% endif %}" href="/">Accueil</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}" href="/dashboard"><i class="bi bi-grid-1x2 me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint=='analysis' %}active{% endif %}" href="/analysis"><i class="bi bi-graph-up me-1"></i>Analyse ML</a></li>
+        <li class="nav-item ms-2"><a class="nav-link nav-cta" href="/diagnostic"><i class="bi bi-lightning-charge-fill me-1"></i>Lancer le diagnostic</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main ──────────────────────────────────────────── -->
+<main class="page-content">
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    BizDigitalCheck ML &nbsp;·&nbsp; Diagnostic de maturité digitale pour PME &nbsp;·&nbsp;
+    <span style="color:var(--indigo)">Flask</span> + <span style="color:var(--cyan)">scikit-learn</span> + <span style="color:var(--emerald)">Chart.js</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Analyse ML — BizDigitalCheck{% endblock %}
+
+{% block head %}
+<style>
+  .cluster-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:1.25rem 1.5rem;
+    transition:border-color .2s;
+  }
+  .cluster-card:hover { border-color:var(--border-hi); }
+  .cluster-title { font-family:var(--font-head); font-size:1.05rem; font-weight:700; }
+  .cluster-meta  { font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .ml-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 12px; border-radius:20px;
+    font-size:11.5px; font-weight:600;
+    background:rgba(99,102,241,.12); color:#a5b4fc;
+    border:1px solid rgba(99,102,241,.25);
+  }
+  .empty-state { text-align:center; padding:4rem 2rem; color:var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 fade-up">
+  <div>
+    <h2 style="margin:0;letter-spacing:-.5px">Analyse Machine Learning</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">
+      K-Means clustering · PCA 2D · {{ count }} entreprise{{ 's' if count != 1 }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <span class="ml-badge"><i class="bi bi-cpu"></i>scikit-learn</span>
+    <a href="/diagnostic" class="btn-primary-custom" style="text-decoration:none;padding:7px 16px;font-size:13.5px">
+      <i class="bi bi-plus-lg me-1"></i>Ajouter
+    </a>
+  </div>
+</div>
+
+{% if not has_ml %}
+<!-- ── Not enough data ──────────────────────────────── -->
+<div class="card-glass no-hover fade-up">
+  <div class="empty-state">
+    <span style="font-size:3rem;display:block;margin-bottom:1rem">🤖</span>
+    <h5>Données insuffisantes pour le ML</h5>
+    <p style="font-size:14px;max-width:420px;margin:0 auto .5rem">
+      Il faut au minimum <strong>4 diagnostics</strong> pour activer le clustering K-Means et la projection PCA.
+      Vous en avez actuellement <strong>{{ count }}</strong>.
+    </p>
+    <a href="/diagnostic" class="btn-primary-custom" style="text-decoration:none;margin-top:1rem;display:inline-block">
+      <i class="bi bi-lightning-charge-fill me-1"></i>Lancer un diagnostic
+    </a>
+  </div>
+</div>
+
+{% else %}
+
+<!-- ── PCA scatter ────────────────────────────────────── -->
+<div class="card-glass no-hover mb-4 fade-up">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div class="section-title" style="margin-bottom:0;flex:1">
+      <i class="bi bi-scatter-chart" style="color:var(--cyan)"></i>Projection PCA — Espace 2D
+    </div>
+    <div id="pcaVarianceLabel" style="font-size:12px;color:var(--muted);font-family:var(--font-mono)"></div>
+  </div>
+  <div style="height:360px">
+    <canvas id="pcaChart"></canvas>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-top:.75rem;text-align:center">
+    Chaque point représente une entreprise. Positionnement calculé par ACP sur 6 dimensions digitales.
+  </div>
+</div>
+
+<!-- ── Cluster cards ──────────────────────────────────── -->
+{% if cluster_stats %}
+<div class="mb-4 fade-up delay-1">
+  <div class="section-title"><i class="bi bi-diagram-3" style="color:var(--indigo)"></i>Groupes K-Means</div>
+  <div class="row g-3">
+    {% for cname, cinfo in cluster_stats.items() %}
+    <div class="col-md-6 col-lg-3">
+      <div class="cluster-card">
+        <div style="font-size:.75rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:.4rem">CLUSTER</div>
+        <div class="cluster-title">
+          <span class="badge-custom badge-{{ cinfo.color }}">{{ cname }}</span>
+        </div>
+        <div class="cluster-meta mt-2">
+          <strong>{{ cinfo.count }}</strong> entreprise{{ 's' if cinfo.count != 1 }}
+        </div>
+        <div style="height:1px;background:var(--border);margin:.7rem 0"></div>
+        <div style="font-size:12.5px">
+          <div class="d-flex justify-content-between"><span style="color:var(--muted)">Score moyen</span><span style="font-family:var(--font-mono);font-weight:600">{{ cinfo.avg }}/100</span></div>
+          <div class="d-flex justify-content-between mt-1"><span style="color:var(--muted)">Min</span><span style="font-family:var(--font-mono)">{{ cinfo.min }}</span></div>
+          <div class="d-flex justify-content-between mt-1"><span style="color:var(--muted)">Max</span><span style="font-family:var(--font-mono)">{{ cinfo.max }}</span></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Domain heatmap-style bar ───────────────────────── -->
+<div class="card-glass no-hover mb-4 fade-up delay-2">
+  <div class="section-title"><i class="bi bi-bar-chart" style="color:var(--amber)"></i>Scores moyens par dimension</div>
+  <div style="height:260px">
+    <canvas id="domainRadar"></canvas>
+  </div>
+</div>
+
+<!-- ── All data table ────────────────────────────────── -->
+<div class="card-glass no-hover fade-up delay-3">
+  <div class="section-title"><i class="bi bi-table" style="color:var(--emerald)"></i>Détail par entreprise</div>
+  <div style="overflow-x:auto">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Entreprise</th>
+          <th>Score</th>
+          <th>Profil</th>
+          <th>Cluster</th>
+          {% for domain in domains %}<th style="font-size:10px">{{ domain.split(' ')[0] }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in all_data %}
+        <tr>
+          <td>
+            <a href="/result/{{ d.id }}" style="color:var(--text);text-decoration:none;font-weight:500;font-size:13.5px">
+              {{ d.company_name }}
+            </a>
+          </td>
+          <td>
+            <span style="font-family:var(--font-mono);font-weight:700;color:
+              {% if d.color == 'success' %}var(--emerald)
+              {% elif d.color == 'info' %}var(--cyan)
+              {% elif d.color == 'warning' %}var(--amber)
+              {% else %}var(--rose){% endif %}">
+              {{ d.digital_score }}
+            </span>
+          </td>
+          <td><span class="badge-custom badge-{{ d.color }}" style="font-size:10.5px">{{ d.emoji }} {{ d.label }}</span></td>
+          <td><span class="chip">C{{ d.cluster }}</span></td>
+          {% for domain in domains %}
+          <td style="font-size:12px;font-family:var(--font-mono);color:var(--muted)">
+            {{ d.domain_scores.get(domain, 0)|int }}%
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if has_ml and pca_json != 'null' %}
+<script>
+const pcaRaw    = {{ pca_json | safe }};
+const avgDoms   = {{ avg_domains | safe }};
+const domains   = {{ domains | tojson }};
+
+const colorMap = { success:'#10b981', info:'#22d3ee', warning:'#f59e0b', danger:'#f43f5e' };
+
+// ── Variance label ───────────────────────────────────────────
+const varLabel = document.getElementById('pcaVarianceLabel');
+if (varLabel && pcaRaw.explained_variance) {
+  const ev = pcaRaw.explained_variance;
+  varLabel.innerHTML = 'PC1 explique <span style="color:var(--cyan)">' + (ev[0]||'—') + '%</span> · PC2 <span style="color:var(--indigo)">' + (ev[1]||'—') + '%</span>';
+}
+
+// ── PCA scatter ───────────────────────────────────────────
+const grouped = {};
+pcaRaw.points.forEach(p => {
+  if (!grouped[p.cluster]) grouped[p.cluster] = { label:p.cluster, color:colorMap[p.color]||'#6366f1', data:[] };
+  grouped[p.cluster].data.push({ x:p.x, y:p.y, company:p.company, score:p.score });
+});
+
+new Chart(document.getElementById('pcaChart'), {
+  type: 'scatter',
+  data: {
+    datasets: Object.values(grouped).map(g => ({
+      label: g.label,
+      data: g.data,
+      backgroundColor: g.color + 'cc',
+      borderColor: g.color,
+      borderWidth: 2,
+      pointRadius: 8,
+      pointHoverRadius: 12,
+    }))
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    scales: {
+      x: { title:{display:true,text:'Composante Principale 1',color:'#64748b',font:{size:11}}, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b'} },
+      y: { title:{display:true,text:'Composante Principale 2',color:'#64748b',font:{size:11}}, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b'} }
+    },
+    plugins: {
+      legend: { labels:{color:'#94a3b8',font:{size:12,family:'DM Sans'},padding:16,boxWidth:12,boxHeight:12} },
+      tooltip: {
+        backgroundColor:'#131926', borderColor:'rgba(99,102,241,.4)', borderWidth:1,
+        titleColor:'#e2e8f0', bodyColor:'#94a3b8', padding:10,
+        callbacks: {
+          title: items => items[0].raw.company,
+          label: item  => ` Score : ${item.raw.score}/100`
+        }
+      }
+    }
+  }
+});
+
+// ── Domain radar avg ─────────────────────────────────────
+const domColors = ['#6366f1','#22d3ee','#10b981','#f43f5e','#f59e0b','#8b5cf6'];
+new Chart(document.getElementById('domainRadar'), {
+  type: 'bar',
+  data: {
+    labels: domains,
+    datasets: [{
+      data: domains.map(d => avgDoms[d] || 0),
+      backgroundColor: domColors.map(c => c + 'bb'),
+      borderColor: domColors,
+      borderWidth: 1.5,
+      borderRadius: 8,
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    scales: {
+      x: { grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#94a3b8',font:{size:12,family:'DM Sans'}} },
+      y: { min:0, max:100, grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:11}} }
+    },
+    plugins: {
+      legend:{display:false},
+      tooltip:{backgroundColor:'#131926',borderColor:'rgba(99,102,241,.4)',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:8,callbacks:{label:c=>' '+c.raw+'%'}}
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}
